@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 import pdfplumber
 import pandas as pd
 import requests
@@ -9,8 +10,14 @@ import os
 
 app = FastAPI()
 
+# Pydantic model để nhận JSON body
+class PDFRequest(BaseModel):
+    pdf_url: str
+
 @app.post("/process-pdf")
-def process_pdf(pdf_url: str):
+def process_pdf(data: PDFRequest):
+    pdf_url = data.pdf_url
+
     try:
         # Tải file PDF từ URL về tạm
         response = requests.get(pdf_url)
@@ -76,7 +83,11 @@ def process_pdf(pdf_url: str):
         tmp_excel_path = os.path.join(tempfile.gettempdir(), f"{file_date}.xlsx")
         df_final.to_excel(tmp_excel_path, index=False)
 
-        return FileResponse(tmp_excel_path, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename=f"{file_date}.xlsx")
+        return FileResponse(
+            tmp_excel_path,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename=f"{file_date}.xlsx"
+        )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
