@@ -91,3 +91,64 @@ def process_pdf(data: PDFRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/split-xlsx")
+async def split_xlsx(data: dict):
+    try:
+        # Lấy URL từ request body
+        xlsx_url = data.get("xlsx_url")
+        if not xlsx_url:
+            raise HTTPException(status_code=400, detail="Thiếu trường 'xlsx_url' trong request body")
+
+        # Trích xuất tên file gốc từ URL
+        parsed_url = urlparse(xlsx_url)
+        file_name = os.path.basename(parsed_url.path)  # Lấy tên file từ URL
+        file_name_without_extension = os.path.splitext(file_name)[0]  # Loại bỏ phần mở rộng (.xlsx)
+
+        # Tải file từ URL về server tạm thời
+        response = requests.get(xlsx_url)
+        if response.status_code != 200:
+            raise HTTPException(status_code=400, detail="Không tải được file từ URL")
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
+            tmp_file.write(response.content)
+            tmp_file_path = tmp_file.name
+
+        # Đọc file Excel và lấy danh sách các sheet
+        excel_data = pd.ExcelFile(tmp_file_path)
+        sheet_names = excel_data.sheet_names
+
+        # Tạo danh sách các file đầu ra dưới dạng base64
+        files_base64 = []
+        for sheet_name in sheet_names:
+            df = excel_data.parse(sheet_name)  # Đọc sheet thành DataFrame
+
+            # Kết hợp tên file gốc và tên sheet để tạo tên file mới
+            output_filename = f"{file_name_without_extension}_{sheet_name}.xlsx"
+
+            # Lưu DataFrame thành file tạm thời
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_output_file:
+                df.to_excel(tmp_output_file.name, index=False)
+
+                # Đọc nội dung file và mã hóa sang base64
+                with open(tmp_output_file.name, "rb") as file:
+                    file_content = file.read()
+                    file_base64 = base64.b64encode(file_content).decode("utf-8")
+
+            # Thêm vào danh sách kết quả
+            files_base64.append({
+                "filename": output_filename,
+                "content": file_base64
+            })
+
+        # Trả về danh sách các file dưới dạng base64
+        return JSONResponse(
+            content={
+                "message": "Tách file thành công",
+                "files": files_base64
+            },
+            status_code=200
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
