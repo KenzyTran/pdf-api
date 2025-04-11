@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 import pdfplumber
 import pandas as pd
@@ -7,6 +7,8 @@ import requests
 from datetime import datetime
 import tempfile
 import os
+from urllib.parse import urlparse
+import base64
 
 app = FastAPI()
 
