@@ -4,3 +4,8 @@ pdfplumber
 pandas
 requests
 openpyxl
+uvicorn[standard]
+pydantic
+selenium
+webdriver-manager
+beautifulsoup4
