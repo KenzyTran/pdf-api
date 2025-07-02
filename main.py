@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 import pdfplumber
@@ -6,9 +6,6 @@ import pandas as pd
 import requests
 from datetime import datetime
 import tempfile
-import os
-from urllib.parse import urlparse
-import base64
 
 app = FastAPI()
 
@@ -68,10 +65,22 @@ def process_pdf(data: PDFRequest):
         df_final['ROOM_CON_LAI'] = df_final['ROOM_CON_LAI'].astype(str).str.replace('.', '', regex=False)
         df_final['SLCP_SOHUU'] = pd.to_numeric(df_final['SLCP_SOHUU'], errors='coerce')
         df_divisor = pd.to_numeric(df_cleaned.iloc[:, 3].astype(str).str.replace('.', '', regex=False), errors='coerce')
+        df_final['DIVISOR'] = df_divisor.values
 
-        df_final['PHAN_TRAM_SO_HUU'] = df_final['SLCP_SOHUU'] / df_divisor
-        df_final['PHAN_TRAM_SO_HUU'] = df_final['PHAN_TRAM_SO_HUU'].apply(lambda x: f"{x:,.5f}" if pd.notnull(x) else '')
+        # Hàm xử lý chia
+        def calc_percent_sohuu(row):
+            sohhuu = row['SLCP_SOHUU']
+            divisor = row['DIVISOR']
+            if pd.isnull(sohhuu) or pd.isnull(divisor):
+                return ''
+            if sohhuu == 0 and divisor == 0:
+                return ''
+            if divisor == 0:
+                return ''
+            value = sohhuu / divisor
+            return f"{value:,.5f}"
 
+        df_final['PHAN_TRAM_SO_HUU'] = df_final.apply(calc_percent_sohuu, axis=1)
         df_final = df_final[['MA_CK', 'SLCP_SOHUU', 'PHAN_TRAM_SO_HUU', 'ROOM_CON_LAI']]
 
         # Ghi file Excel tạm
