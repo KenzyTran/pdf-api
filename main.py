@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 import pdfplumber
 import pandas as pd
+import numpy as np
 import requests
 from datetime import datetime
 import tempfile
@@ -70,7 +71,10 @@ def process_pdf(data: PDFRequest):
         df_divisor = pd.to_numeric(df_cleaned.iloc[:, 3].astype(str).str.replace('.', '', regex=False), errors='coerce')
 
         df_final['PHAN_TRAM_SO_HUU'] = df_final['SLCP_SOHUU'] / df_divisor
-        df_final['PHAN_TRAM_SO_HUU'] = df_final['PHAN_TRAM_SO_HUU'].apply(lambda x: f"{x:,.5f}" if pd.notnull(x) else '')
+        # Replace null/NaN values and infinity values with 0
+        df_final['PHAN_TRAM_SO_HUU'] = df_final['PHAN_TRAM_SO_HUU'].fillna(0)
+        df_final['PHAN_TRAM_SO_HUU'] = df_final['PHAN_TRAM_SO_HUU'].replace([np.inf, -np.inf], 0)
+        df_final['PHAN_TRAM_SO_HUU'] = df_final['PHAN_TRAM_SO_HUU'].apply(lambda x: f"{x:,.5f}")
 
         df_final = df_final[['MA_CK', 'SLCP_SOHUU', 'PHAN_TRAM_SO_HUU', 'ROOM_CON_LAI']]
 
