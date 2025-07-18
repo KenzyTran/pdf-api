@@ -84,7 +84,7 @@ def process_pdf(data: PDFRequest):
         df_final = df_final[['MA_CK', 'SLCP_SOHUU', 'PHAN_TRAM_SO_HUU', 'ROOM_CON_LAI']]
 
         # Ghi file Excel tạm
-        file_date = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        file_date = datetime.now().strftime("%Y-%m-%d")
         with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_excel:
             df_final.to_excel(tmp_excel.name, index=False)
             tmp_excel_path = tmp_excel.name
